@@ -44,13 +44,13 @@ affinities matrix.
 class ModelConfig:
     n_layers: int = 4
     n_heads: int = 8
-    n_embd: int = 896
+    n_embd: int = 768
     head_dim: int = n_embd // n_heads
     vocab_size: int = 2048
     ffn_dim_raise: int = 4
-    norm_eps: int = 1e-5
+    norm_eps: int = 1e-8
     batch_size: int = 32
-    max_context_length: int = 650
+    max_context_length: int = 596
     dropout: float = 0.1
 
 Config = ModelConfig()

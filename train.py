@@ -15,6 +15,21 @@ data_size:int = 750 #how many rows we will use from the dataset in one training 
 max_steps = 50000
 check_interval = 1000
 
+data = load_dataset("HuggingFaceFW/fineweb", name="CC-MAIN-2024-10", split="train", streaming=True)
+loader = DataLoader(data, batch_size=Config.batch_size)
+
+
+
+def train_tok():
+    
+    
+    print("Training Tokenizer")
+    tok = Tokenizer()
+    
+    tok.train(train, Config.vocab_size)
+    tok.save()
+    print("trained tokenizer")
+
 def train():
     
     m = Nate(Config)
@@ -24,11 +39,8 @@ def train():
     tok.load()
 
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
-    
-    data = load_dataset("HuggingFaceFW/fineweb", name="CC-MAIN-2024-10", split="train", streaming=True)
-    loader = DataLoader(data, batch_size=Config.batch_size)
+    train:str = ""
 
-    train = ""
     for i,row in enumerate(loader):
         for text in row['text']:
             train += text
@@ -52,5 +64,7 @@ def train():
                 f="model.pt")
 
 
-if __name__ == "__main__":  
+if __name__ == "__main__":
+
+    # train_tok()
     train()
