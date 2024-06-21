@@ -1,4 +1,4 @@
-from nate.model import Config
+from model import Config
 from dataclasses import dataclass
 
 @dataclass

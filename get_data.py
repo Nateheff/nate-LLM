@@ -3,8 +3,8 @@ import requests
 
 from datasets import load_dataset
 from torch.utils.data import DataLoader
-from nate.model import Config
-from nate.Tokenizer import Tokenizer
+from model import Config
+from Tokenizer import Tokenizer
 
 
 tok = Tokenizer()

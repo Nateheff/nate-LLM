@@ -1,5 +1,5 @@
-from nate.model import Nate, Config
-from nate.Tokenizer import Tokenizer
+from model import Nate, Config
+from Tokenizer import Tokenizer
 import torch
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'

@@ -41,6 +41,26 @@ def get_batch(tokens, batch_size: int, block_size: int, device):
     return x, y
 
 
+def create_targets(x: tuple, y:tuple):
+    #concatenate each prompt with the final target
+    x = [prompt + target for prompt, target in zip(x,y)]
+
+    return x
+
+def pad(x:list, y:list, context_length:int, pad_token: int):
+    for prompt, response in zip(x,y):
+        padding = [pad_token]*(context_length - len(prompt))
+        prompt = prompt.extend(padding)
+        response = response.extend(padding)
+
+    
+
 @torch.no_grad
 def estimate_loss(model):
     pass
+
+#get target full
+#tokenize
+#remove first token from targets
+#pad prompts and targets
+#done

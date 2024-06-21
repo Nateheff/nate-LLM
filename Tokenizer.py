@@ -3,7 +3,8 @@ import pickle
 import sys
 sys.path.append("../Nate")
 from helpers import get_stats, merge
-from nate.model import Config
+from model import Config
+import torch
 #regex.compile(pattern)
 # https://github.com/Zjh-819/LLMDataHub
 
@@ -29,10 +30,11 @@ class Tokenizer:
         }
         self.merges = {}
         self.vocab = {}
+        self.vocab_size = 256
         
         
 
-    def train(self, text, vocab_size):
+    def train(self, text, vocab_size, loaded=False):
         print('training')
         """
         Since we are encoding our tokens to utf-8, and there are 256 base "tokens" in utf-8, if our vocab size is less
@@ -47,14 +49,19 @@ class Tokenizer:
         encoding of of each character at int. For example: vocab has 65: b'a' and the utf-8 encoding of a is 65, so when
         we do vocab[65], we get the byte value of a
         """
-        assert vocab_size >= 256
-        num_merges = vocab_size - 256
+        assert vocab_size >= self.vocab_size
+        num_merges = vocab_size - self.vocab_size
+        
 
         pieces = re.findall(self.pattern, text)
 
         ids = [list(chars.encode('utf-8')) for chars in pieces]
         merges = {}
+        
         vocab = {idx:bytes([idx]) for idx in range(256)}
+
+        if not loaded:
+            self.vocab = vocab
         print(len(ids))
         for i in range(num_merges):
             stats= {}
@@ -64,12 +71,13 @@ class Tokenizer:
             # if(len(stats) <= 5):
             #     print(f"{i}: Stats: {stats} Ids length: {len(ids)}")
             pair = max(stats, key=stats.get)
-            idx = 256 + i
+            idx = self.vocab_size + i
             ids = [merge(piece, pair, idx) for piece in ids]
             self.merges[pair] = idx
-            vocab[idx] = vocab[pair[0]] + vocab[pair[1]]
+            self.vocab[idx] = self.vocab[pair[0]] + self.vocab[pair[1]]
 
-        self.vocab = vocab
+        
+        self.vocab_size = vocab_size
         print(len(ids))
         
 
@@ -91,7 +99,19 @@ class Tokenizer:
         self.vocab = model['vocab']
         self.merges = model['merges']
         stream.close()
+        self.vocab_size = len(self.vocab)
 
+    def add(self, token:str, vocab_size:int):
+        self.vocab[vocab_size] = bytes(token.encode('utf-8'))
+
+    def encode_many(self, texts:tuple):
+        out = []
+        for text in texts:
+            tokens = self.encode_ordinary(text)
+            out.append(tokens)
+        return out
+        
+                
 
     def encode_bytes(self, text_bytes):
         ids = list(text_bytes)

@@ -44,13 +44,13 @@ affinities matrix.
 class ModelConfig:
     n_layers: int = 4
     n_heads: int = 8
-    n_embd: int = 768
+    n_embd: int = 1024
     head_dim: int = n_embd // n_heads
-    vocab_size: int = 2048
+    vocab_size: int = 1200
     ffn_dim_raise: int = 4
     norm_eps: int = 1e-8
-    batch_size: int = 32
-    max_context_length: int = 596
+    batch_size: int = 4
+    max_context_length: int = 24
     dropout: float = 0.1
 
 Config = ModelConfig()
@@ -137,6 +137,49 @@ class MultiHeadAttention(nn.Module):
         return out
 
 
+class CrossAttention(nn.Module):
+    def __init__(self, n_embd, head_size, context_length, dropout):
+        super().__init__()
+        self.head_size = head_size
+        self.n_embd = n_embd
+        self.context_length = context_length
+        self.query = nn.Linear(self.n_embd, self.head_size, bias=False)
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, x, key, value):
+        length = x.shape[-2]
+        q = self.query(x)
+        k = key(x)
+        v = value(x)
+
+        affinities_full = q @ k.T
+        affinities_full = affinities_full * self.head_size**-0.5
+        tril = torch.tril(torch.ones((length,length), device=device))
+        affinities = affinities_full.masked_fill(tril == 0, float('-inf'))
+
+        affinities = F.softmax(affinities, dim=1)
+        out = self.dropout(affinities)
+        out = affinities @ v
+        return out
+
+
+class MultiHeadCrossAttention(nn.Module):
+    def __init__(self, n_heads, n_embd, head_dim, context_length, dropout):
+        super().__init__()
+        self.n_heads = n_heads
+        self.n_embd = n_embd
+        self.head_size = head_dim
+        self.conext_length = context_length
+        self.heads = nn.ModuleList([CrossAttention(n_embd,head_dim,context_length, dropout) for i in range(n_heads)])
+        self.linear = nn.Linear(self.n_embd, self.n_embd)
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, x, key, value):
+        out = torch.cat([h(x, key, value) for h in self.heads], dim=-1)
+        out = self.dropout(self.linear(out))
+        return out
+    
+
 class FeedForward(nn.Module):
     """
     Feed Forward Layer
@@ -163,7 +206,7 @@ class FeedForward(nn.Module):
 
 class RMSNorm(nn.Module):
     """
-    RMS Normalization
+    RMS (Root Mean Square) Normalization
     https://arxiv.org/pdf/1910.07467
 
     Implementation based on paper linked above. 
@@ -175,13 +218,14 @@ class RMSNorm(nn.Module):
         self.weights = nn.Parameter(torch.ones(dim))
 
     def _norm(self, x:torch.Tensor):
+        # X / sqrt(mean(x^2) + eps)
         return x * (x.pow(2).mean(dim=-1, keepdim=True) + self.eps)**-0.5
     
     def forward(self, x):
         return self._norm(x) * self.weights
     
 
-class Block(nn.Module):
+class DecoderBlock(nn.Module):
     """
     Transformer Block
 
@@ -189,21 +233,33 @@ class Block(nn.Module):
     """
     def __init__(self, config:ModelConfig):
         super().__init__()
-        self.attention = MultiHeadAttention(config.n_heads, config.n_embd, config.head_dim, config.max_context_length, config.dropout)
+        self.self_attention = MultiHeadAttention(config.n_heads, config.n_embd, config.head_dim, config.max_context_length, config.dropout)
+        self.cross_attention = MultiHeadCrossAttention(config.n_heads, config.n_embd, config.head_dim, config.max_context_length, config.dropout)
         self.ffn = FeedForward(config.n_embd, config.ffn_dim_raise, config.dropout)
+        self.norm_cross_attn = RMSNorm(config.n_embd, config.norm_eps)
         self.norm_attn = RMSNorm(config.n_embd, config.norm_eps)
         self.norm_ffn = RMSNorm(config.n_embd, config.norm_eps)
 
-    def forward(self, x):
+    def forward(self, x, key, value):
         """
         Why are we adding x back? Residual Connecitons! Residual connections helps us not loose
         any information from the operations. We retain this information by adding x back to the 
         output.
         """
-        x = x + self.attention(self.norm_attn(x))
+        x = x + self.cross_attention(self.norm_cross_attn(x), key, value)
+        x = x + self.self_attention(self.norm_self_attn(x))
         x = x + self.ffn(self.norm_ffn(x))
         return x
         
+
+class EncoderBlock(nn.Module):
+    def __init__(self, config: ModelConfig):
+        super().__init__()
+        self.attention = MultiHeadAttention(config.n_heads, config.n_embd, config.head_dim, config.max_context_length, config.dropout)
+        self.ffn = FeedForward(config.n_embd, config.ffn_dim_raise, config.dropout)
+        self.norm_attn = RMSNorm(config.n_embd, config.norm_eps)
+        self.norm_ffn = RMSNorm(config.n_embd, config.norm_eps)
+
 
 class Nate(nn.Module):
     """
@@ -220,9 +276,10 @@ class Nate(nn.Module):
         super().__init__()
         self.config = config
         self.token_embedding = nn.Embedding(self.config.vocab_size, self.config.n_embd)
-        self.position_embedding = nn.Embedding(self.config.max_context_length, self.config.n_embd)
-
-        self.layers = nn.ModuleList([Block(config) for i in range(self.config.n_layers)])
+        self.position_embedding_enc = nn.Embedding(self.config.max_context_length, self.config.n_embd)
+        self.position_embedding_dec = nn.Embedding(self.config.max_context_length, self.config.n_embd)
+        self.encoder_layers = nn.ModuleList([EncoderBlock(config) for i in range(self.config.n_layers)])
+        self.decoder_layers = nn.ModuleList([DecoderBlock(config) for i in range(self.config.n_layers)])
         self.norm = RMSNorm(self.config.n_embd, self.config.norm_eps)
         self.linear = nn.Linear(self.config.n_embd, self.config.vocab_size)
 
@@ -235,10 +292,12 @@ class Nate(nn.Module):
         """
         B, T = x.shape
         toks = self.token_embedding(x)
-        pos = self.position_embedding(torch.arange(T, device= device))
+        pos = self.position_embedding_enc(torch.arange(T, device= device))
+
+        #ADD ENCODER AND HAVE OUTPUT ENCODING OF ENCODER BE SAVED TO TOKS
 
         x = toks + pos
-        for block in self.layers:
+        for block in self.decoder_layers:
             x = block(x)
         x = self.norm(x)
         logits = self.linear(x)
@@ -251,7 +310,7 @@ class Nate(nn.Module):
 
         return logits, loss
 
-    def generate(self, prompt:torch.tensor, new_tokens: int):
+    def generate(self, prompt:torch.tensor, new_tokens: int) -> torch.tensor:
 
         for _ in range(new_tokens):
             
