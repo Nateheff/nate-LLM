@@ -47,11 +47,15 @@ def create_targets(x: tuple, y:tuple):
 
     return x
 
-def pad(x:list, y:list, context_length:int, pad_token: int):
+def pad(x:list, y:list, context_length:int, pad_token: int, padding_side="left"):
     for prompt, response in zip(x,y):
         padding = [pad_token]*(context_length - len(prompt))
-        prompt = prompt.extend(padding)
-        response = response.extend(padding)
+        if padding_side == "right":
+            prompt.extend(padding)
+            response.extend(padding)
+        else:
+            prompt[:] = padding + prompt
+            response[:] = padding + response
 
     
 

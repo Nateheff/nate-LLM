@@ -56,12 +56,11 @@ class Tokenizer:
         pieces = re.findall(self.pattern, text)
 
         ids = [list(chars.encode('utf-8')) for chars in pieces]
-        merges = {}
+
         
         vocab = {idx:bytes([idx]) for idx in range(256)}
 
-        if not loaded:
-            self.vocab = vocab
+        self.vocab = vocab
         print(len(ids))
         for i in range(num_merges):
             stats= {}
@@ -71,6 +70,7 @@ class Tokenizer:
             # if(len(stats) <= 5):
             #     print(f"{i}: Stats: {stats} Ids length: {len(ids)}")
             pair = max(stats, key=stats.get)
+            
             idx = self.vocab_size + i
             ids = [merge(piece, pair, idx) for piece in ids]
             self.merges[pair] = idx
@@ -101,8 +101,22 @@ class Tokenizer:
         stream.close()
         self.vocab_size = len(self.vocab)
 
-    def add(self, token:str, vocab_size:int):
-        self.vocab[vocab_size] = bytes(token.encode('utf-8'))
+
+    def add(self, token:str):
+        #see what we can encode in the new token
+        ids = self.encode_ordinary(token)
+        #get stats for token
+        
+        while(len(ids) > 1):
+            stats = get_stats(ids)
+            pair = max(stats, key=stats.get)
+            #with new pair, add one to vocab size, add merge to self.merges and self.vocab
+            ids = merge(ids, pair, self.vocab_size)
+            self.merges[pair] = self.vocab_size
+            self.vocab[self.vocab_size] = self.vocab[pair[0]] + self.vocab[pair[1]]
+            self.vocab_size += 1
+            #go until ids is a single token (length <= 1)
+            
 
     def encode_many(self, texts:tuple):
         out = []

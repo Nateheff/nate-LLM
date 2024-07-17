@@ -21,18 +21,18 @@ max_epochs = 10
 # loader = DataLoader(data, batch_size=Config.batch_size)
 # loader=None
 
-train_tokens = " [WEATHER] [TIME] [TURRET] [MUSIC] [DATE] hey sam shoot fire intruder weather time what how red alert spotify music play song time what's how's"
+train_tokens = " "
 # for i, row in enumerate(loader):
 #     for text in row['text']:
 #         train_tokens += text
-#     if i > 400:
+#     if i > 100:
 #         break
 
 def train_new_sam_tok():
     print("Training SAM tokenizer from scratch")
     tok = Tokenizer()
     tok.train(train_tokens, Config.vocab_size, loaded=False)
-    tok.save("SAM/model.pickle")
+    tok.save("SAM/model_base.pickle")
     print("trained first")
 
 def train_sam_tok():
@@ -40,10 +40,11 @@ def train_sam_tok():
     tok = Tokenizer()
     tok.load("SAM/model.pickle")
 
-    tok.train(train_tokens, Config.vocab_size + 89, True)
+    tok.train(train_tokens, Config.vocab_size + 13, True)
     tok.save("SAM/model.pickle")
     print(tok.vocab)
     print("trained SAM tokenizer")
+
 
 def train_tok():
     print("Training Tokenizer")
@@ -99,8 +100,10 @@ def train_sam():
     print("Loop Start")
     for i in range(max_epochs):
         for x,y in loader:
+
             y = create_targets(x,y)
             x,y = tok.encode_many(x), tok.encode_many(y)
+
             y = [tokens[1:] for tokens in y]
             pad(x,y,Config.max_context_length, 0)
             # print(f"X: {x} {len(x[0])} \n Y: {y} {len(y[0])}")
@@ -120,7 +123,6 @@ def train_sam():
     
 
 
-
 def test_sam():
     model = Nate(Config)
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
@@ -133,31 +135,41 @@ def test_sam():
     tok = Tokenizer()
     tok.load("SAM/model.pickle")
 
-    test = "Hey sam what time is it"
+    test = "<|begin|> sam stop firing <|end|>"
     toks = tok.encode_ordinary(test)
     toks = torch.tensor(toks)
     toks = toks.unsqueeze(0)
     toks = toks.to(device)
 
     logits = model.generate(toks,1)
-    print(len(toks[0]))
-    print(len(logits[0]))
+
     print(logits)
     
+    print(tok.decode(logits.tolist()[0]))
+    
+specials_list = [" [WEATHER]", " [TIME]", " [TURRET]", " [MUSIC]", " [DATE]", " hey", " sam", " shoot", " fire", " intruder", " weather", " time", " what", " how", " red", " alert", " spotify", " music", " play", " song", " time", " what's", " how's"]
 
 
 if __name__ == "__main__":
     # train_sam_tok()
     # train_new_sam_tok()
-    tok = Tokenizer()
-    tok.load("SAM/model.pickle")
-    toks = tok.encode_ordinary("Hey sam play some music [MUSIC]")
-    print(toks)
+    # tok = Tokenizer()
+    # tok.load("SAM/model.pickle")
+    # print(tok.vocab)
+
+    # for special in specials_list:
+    #     tok.add(special)
+    # tok.add(" [STOP]")
+    # tok.save("SAM/model.pickle")
     # print(tok.vocab)
     # train()
     # train_sam()
-    # test_sam()
+    test_sam()
+
     
 
 
 # " [WEATHER] [TIME] [TURRET] [MUSIC] [DATE] hey sam shoot fire intruder weather time what how red alert spotify music play song time what's how's"
+
+
+# " <|begin_prompt|> <end_prompt|>"
