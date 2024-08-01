@@ -1,4 +1,4 @@
-from model import Config
+from model.model import Config
 from dataclasses import dataclass
 
 @dataclass

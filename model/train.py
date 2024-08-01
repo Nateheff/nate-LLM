@@ -136,6 +136,7 @@ def test_sam():
     tok.load("SAM/model.pickle")
 
     test = "<|begin|> sam stop firing <|end|>"
+    print("begin inference")
     toks = tok.encode_ordinary(test)
     toks = torch.tensor(toks)
     toks = toks.unsqueeze(0)

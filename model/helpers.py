@@ -63,6 +63,9 @@ def pad(x:list, y:list, context_length:int, pad_token: int, padding_side="left")
 def estimate_loss(model):
     pass
 
+
+
+
 #get target full
 #tokenize
 #remove first token from targets
