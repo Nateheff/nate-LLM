@@ -143,7 +143,7 @@ class FeedForward(nn.Module):
 
     Two fully connected layers with a ReLU non-linearity in the middle which are vital to the model.
     This is a perfect application of fully connected layers as they allow the model to learn complex 
-    relationships and pattens better. This layer is also super important because of the non-linearity.
+    relationships and patterns better. This layer is also super important because of the non-linearity.
     This is the first non-linearity in the model. The model can now learn more complex, non-linear relationships
     in the data.
     """

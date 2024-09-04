@@ -1,10 +1,9 @@
 import regex as re
 import pickle
 import sys
-sys.path.append("../Nate")
-from helpers import get_stats, merge
-from model import Config
-import torch
+
+from .helpers import get_stats, merge
+from .model import Config
 #regex.compile(pattern)
 # https://github.com/Zjh-819/LLMDataHub
 

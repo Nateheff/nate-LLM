@@ -4,13 +4,15 @@ WORKDIR /code
 
 COPY ./requirements.txt /code/requirements.txt
 
+RUN apt-get update && apt-get install ffmpeg libsm6 libxext6  -y
+
 RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
 
-ENV PYTHONPATH="./"
+ENV PYTHONPATH="/"
 
 COPY . /code
 
-EXPOSE 80
+EXPOSE 8000
 
 ENTRYPOINT ["python", "deploy.py"]
 

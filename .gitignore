@@ -2,3 +2,10 @@
 *.pt
 *.pickle
 *.txt
+vosk*
+__init__*
+*.pyc
+*.pyd
+*venv
+SAM\*
+send*
