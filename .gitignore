@@ -9,3 +9,5 @@ __init__*
 *venv
 SAM\*
 send*
+.*
+Dockerfile

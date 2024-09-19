@@ -57,7 +57,15 @@ def pad(x:list, y:list, context_length:int, pad_token: int, padding_side="left")
             prompt[:] = padding + prompt
             response[:] = padding + response
 
-    
+
+def pad_x(x:list, context_length:int, pad_token: int, padding_side="left"):
+    for prompt in x:
+        padding = [pad_token]*(context_length - len(prompt))
+        if padding_side == "right":
+            prompt.extend(padding)
+        else:
+            prompt[:] = padding + prompt
+            
 
 @torch.no_grad
 def estimate_loss(model):

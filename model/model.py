@@ -42,15 +42,15 @@ affinities matrix.
 
 @dataclass
 class ModelConfig:
-    n_layers: int = 6
-    n_heads: int = 8
-    n_embd: int = 1024
+    n_layers: int = 4
+    n_heads: int = 4
+    n_embd: int = 512
     head_dim: int = n_embd // n_heads
-    vocab_size: int = 1092
+    vocab_size: int = 1109
     ffn_dim_raise: int = 4
     norm_eps: int = 1e-8
-    batch_size: int = 256
-    max_context_length: int = 256
+    batch_size: int = 2
+    max_context_length: int = 32
     dropout: float = 0.1
 
 Config = ModelConfig()
@@ -266,9 +266,75 @@ class Nate(nn.Module):
             # apply softmax to get probabilities
             probs = F.softmax(logits, dim=-1) # (B, C)
             # sample from the distribution
-            idx_next = torch.multinomial(probs, num_samples=1) # (B, 1)
+            print("PROBS: ",probs[:5])
+            # idx_next = torch.multinomial(probs, num_samples=1) # (B, 1) #sample based on probs
+            idx_next = probs.argmax(dim=-1, keepdim=True) #only take token with highest probability
             # append sampled index to the running sequence
             prompt = torch.cat((prompt, idx_next), dim=1) # (B, T+1)
         return prompt
+    
+
+class LinearBlock(nn.Module):
+    def __init__(self, input_dims:int, scale_down:int, dropout:float):
+        super().__init__()
+        self.block = nn.Sequential(
+            nn.Linear(input_dims, input_dims//scale_down),
+            nn.GELU(),
+            nn.Linear(input_dims//scale_down, input_dims),
+            nn.GELU(),
+            nn.Dropout(dropout)
+            )
+
+    def forward(self, x):
+        x = self.block(x)
+        return x
+        
+
+class NateClass(nn.Module):
+    def __init__(self, config:ModelConfig):
+        super().__init__()
+        self.config = config
+        self.token_embedding = nn.Embedding(self.config.vocab_size, self.config.n_embd)
+        self.position_embedding = nn.Embedding(self.config.max_context_length, self.config.n_embd)
+        self.layers = nn.ModuleList([Block(config) for i in range(self.config.n_layers)])
+        self.norm = RMSNorm(self.config.n_embd, self.config.norm_eps)
+        self.lin1 = nn.Linear(self.config.n_embd * self.config.max_context_length, 4096)
+        self.gelu = nn.GELU()
+        self.lin_block1 = LinearBlock(8192, 2, config.dropout)
+        self.lin_block2 = LinearBlock(8192, 2, config.dropout)
+        self.out = nn.Linear(4096, config.vocab_size)
+
+    def forward(self, x:torch.tensor, target=None):
+        B,T = x.shape
+        tok_embd = self.token_embedding(x)
+        pos_embd = self.position_embedding(torch.arange(T, device=device))
+        x = tok_embd + pos_embd
+        for block in self.layers:
+            x = block(x)
+        x = self.norm(x)
+        x = x.reshape((B, self.config.n_embd * T))
+        x = self.lin1(x)
+        x = self.gelu(x)
+        # x = x + self.lin_block1(x)
+        # x = x + self.lin_block2(x)
+        x = self.out(x)
+        
+        if target is not None:
+            # x = F.softmax(x, dim=-1)
+            loss_fn = nn.CrossEntropyLoss()
+            # target = target.view(B*self.config.vocab_size)
+            # x = x.view(B*self.config.vocab_size)
+            
+            loss = loss_fn(x,target)
+        else:
+            loss = 0
+        return x, loss
+
+    def generate(self, prompt:torch.tensor):
+        logits, loss = self(prompt)
+        probs = F.softmax(logits, dim=-1)
+        # print(probs[0][1037], probs[0][1043], probs[0][1091])
+        idx = probs.argmax(dim=-1, keepdim=True)
+        return idx
 
 

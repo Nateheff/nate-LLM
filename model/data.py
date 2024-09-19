@@ -19,16 +19,20 @@ class Sam_Dataset(Dataset):
     def __getitem__(self, index):
         if self.noise_src:
             ind_noise = np.random.randint(0,self.src_length-32)
-            noise = self.text[ind_noise:ind_noise+32]
+            noise = self.text[ind_noise:ind_noise+(32-len(self.data['prompt'][index]))]
             beg = noise.find(' ')
             noise = noise[beg:]
+            
+            if noise.find(' ') != -1:
+                ind = noise.rfind(' ')
+                noise = noise[:ind]
+            
             return begin_token + self.data['prompt'][index] + noise + end_token, self.data['response'][index]
         else:
             return begin_token + self.data["prompt"][index] + end_token, self.data["response"][index]
     
     def __len__(self):
         return len(self.data["prompt"])
-
 
 
 dataset = {
@@ -173,11 +177,16 @@ dataset_fire = {
         " sam kill him",
         " sam kill her",
         " sam kill them",
+        " sam fire",
         " sam destroy",
         " sam destroy her",
         " sam destroy him",
-        " sam shoot them", #29
+        " sam shoot them", #30
         " sam track me",
+        " sam track me",
+        " sam track",
+        " sam track",
+        " sam tracking",
         " sam track",
         " sam tracking",
         " sam watch me",
@@ -193,27 +202,47 @@ dataset_fire = {
         " sam watch them",
         " sam eyes up",
         " sam eyes open",
-        " sam head on a swivel", #17
-        " sam ",
-        " sam ",
-        " sam ",
-        " sam ",
-        " sam ",
-        " sam ",
-        " sam ",
-        " sam ",
-        " sam ",
-        " sam ",
-        " sam ",
-        " sam ",
-        " sam ",
-        " sam ",
-        " sam ",
-        " sam ",
-        " sam ",
-        " sam ",
-        " sam ",
-        " sam " #20
+        " sam head on a swivel", 
+        " sam watch out",
+        " sam eyes on me",
+        " sam eyes on her",
+        " sam eyes on him",
+        " sam eyes on them",
+        " sam track me",
+        " sam track",
+        " sam tracking",
+        " sam watch me",#29
+        " sam",
+        " sam",
+        " sam",
+        " sam",
+        " sam",
+        " sam",
+        " sam",
+        " sam",
+        " sam",
+        " sam",
+        " sam",
+        " sam",
+        " sam",
+        " sam",
+        " sam",
+        " sam",
+        " sam",
+        " sam",
+        " sam",
+        " sam",
+        " sam",
+        " sam",
+        " sam",
+        " sam",
+        " sam", 
+        " sam",
+        " sam",
+        " sam",
+        " sam", 
+        " sam", #25
+
     ],
     'response':[
         " [TURRET]",
@@ -245,6 +274,7 @@ dataset_fire = {
         " [TURRET]",
         " [TURRET]",
         " [TURRET]",
+        " [TURRET]",
         " [TIME]",
         " [TIME]",
         " [TIME]",
@@ -262,6 +292,29 @@ dataset_fire = {
         " [TIME]",
         " [TIME]",
         " [TIME]",
+        " [TIME]",
+        " [TIME]",
+        " [TIME]",
+        " [TIME]",
+        " [TIME]",
+        " [TIME]",
+        " [TIME]",
+        " [TIME]",
+        " [TIME]",
+        " [TIME]",
+        " [TIME]",
+        " [TIME]",
+        " [TIME]",
+        " [STOP]",
+        " [STOP]",
+        " [STOP]",
+        " [STOP]",
+        " [STOP]",
+        " [STOP]",
+        " [STOP]",
+        " [STOP]",
+        " [STOP]",
+        " [STOP]",
         " [STOP]",
         " [STOP]",
         " [STOP]",
@@ -285,7 +338,7 @@ dataset_fire = {
     ]
 }
 
-print(len(dataset['prompt']), len(dataset["response"]))
+print(len(dataset_fire['prompt']), len(dataset_fire["response"]))
 
 noise = [
     " watch",

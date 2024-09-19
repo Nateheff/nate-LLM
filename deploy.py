@@ -1,14 +1,14 @@
 import torch
-from model.model import Nate, Config
+from model.model import Nate, Config, NateClass
 # from fastapi import FastAPI
 from flask import Flask, request, jsonify
 # from pydantic import BaseModel
 from model.Tokenizer import Tokenizer
-
+from model.helpers import pad_x
 from vosk import Model, KaldiRecognizer
 import json
 import base64
-import numpy as np
+
 
 
 
@@ -29,9 +29,9 @@ def load_models():
 
 
 
-    sam = Nate(Config)
+    sam = NateClass(Config)
     optimizer = torch.optim.Adam(sam.parameters(), lr=1e-4)
-    checkpoint = torch.load("SAM/model.pt")
+    checkpoint = torch.load("SAM/model_class.pt")
     sam.load_state_dict(checkpoint['model_state_dict'])
     optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
     sam.eval()
@@ -79,14 +79,15 @@ def predict():
         query = data["text"]
         prompt = make_prompt(query)
         toks = tok.encode_ordinary(prompt)
+        toks = [toks]
+        pad_x(toks,Config.max_context_length, 0)
         toks = torch.tensor(toks)
-        toks = toks.unsqueeze(0)
+        # toks = toks.unsqueeze(0)
         toks = toks.to(device)
 
-        logits: torch.Tensor = sam.generate(toks,1)
+        logits: torch.Tensor = sam.generate(toks)
         logits.to("cpu")
-        print(tok.decode(logits.tolist()[0]))
-        print(logits)
+        
         return str(logits.tolist()[0][-1])
 
 
