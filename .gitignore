@@ -11,3 +11,5 @@ SAM\*
 send*
 .*
 Dockerfile
+lora\*
+data\*

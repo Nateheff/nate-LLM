@@ -161,7 +161,7 @@ dataset_fire = {
         " sam red alert",
         " sam red alert",
         " sam red alert",
-        " hey sam red alert",
+        " sam red alert",
         " sam turret",
         " sam turret",
         " sam intruder",
