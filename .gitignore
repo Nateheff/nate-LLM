@@ -1,4 +1,5 @@
 # Model Weights #
+*
 *.pt
 *.pickle
 *.txt
@@ -7,9 +8,6 @@ __init__*
 *.pyc
 *.pyd
 *venv
-SAM\*
 send*
-.*
 Dockerfile
-lora/
-data/
+

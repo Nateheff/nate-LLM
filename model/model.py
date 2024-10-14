@@ -333,7 +333,7 @@ class NateClass(nn.Module):
     def generate(self, prompt:torch.tensor):
         logits, loss = self(prompt)
         probs = F.softmax(logits, dim=-1)
-        # print(probs[0][1037], probs[0][1043], probs[0][1091])
+        
         idx = probs.argmax(dim=-1, keepdim=True)
         return idx
 
